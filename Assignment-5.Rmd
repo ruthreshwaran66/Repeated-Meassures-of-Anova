@@ -1,0 +1,270 @@
+---
+title: "Assignment-5"
+author: "RUTHRESHWARAN M"
+date: "2023-05-04"
+output:
+html_document: default
+---
+```{r}
+
+library(ggplot2)
+library(haven)
+datatibble1 <- read_sav("Raw/chap6data.sav")
+datatibble1
+
+datatibble1$owner
+
+datatibble1$rerelate
+```
+
+```{r}
+freq_table <- table(datatibble1$owner)
+freq_table
+
+prop.table(freq_table)
+
+summary(datatibble1$owner)
+library(psych)
+describe(datatibble1$owner)
+
+
+label1 <- c("publically listed","privately owned","trust / charity","public sector")
+
+pie(freq_table, label1, main="Pie Chart: owners",col = rainbow(length(freq_table)))
+```
+
+Dependent Variable: rerelate
+
+```{r}
+freq_table1 <- table(datatibble1$rerelate)
+freq_table1
+
+summary(datatibble1$rerelate)
+describe(datatibble1$rerelate)
+hist(datatibble1$rerelate, breaks = 5)
+```
+
+
+One-Way ANOVA:
+
+```{r}
+
+org_aov <- aov(datatibble1$rerelate ~ factor(datatibble1$owner))
+
+org_aov
+
+summary(org_aov)
+
+library(car)
+
+leveneTest(datatibble1$rerelate ~ factor(datatibble1$owner),centre = mean)
+
+
+```
+
+Effect Size:
+
+```{r}
+
+library(sjstats)
+
+effectsize::eta_squared(org_aov, partial = TRUE)
+
+```
+
+```{r}
+library(effectsize)
+
+Aov <- oneway.test(owner ~ rerelate, data = datatibble1, var.equal = TRUE)
+effectsize(Aov)
+effectsize(org_aov)
+effectsize(org_aov, partial = TRUE)
+effectsize(org_aov, partial = FALSE)
+
+
+```
+
+```{r}
+library(afex)
+eta_squared(org_aov)
+
+omega_squared(org_aov)
+
+
+```
+
+Post-hoc Test:
+
+```{r}
+TukeyHSD(org_aov)
+
+
+```
+
+Exploring the variable "Variety":
+
+```{r}
+summary(datatibble1$cvariety)
+describe(datatibble1$cvariety)
+freq_table1 <- table(datatibble1$cvariety)
+freq_table1
+cumsum(freq_table1)
+prop.table(freq_table1)
+
+hist(datatibble1$cvariety)
+```
+
+```{r}
+org_aov1 <-aov(cvariety ~ factor(owner), data = datatibble1)
+
+summary(org_aov1)
+
+leveneTest(cvariety ~ factor(owner), data = datatibble1, center = mean)
+
+```
+
+```{r}
+
+eta_squared(org_aov1)
+
+omega_squared(org_aov1)
+
+
+
+```
+
+Post-hoc Test:
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+result <- TukeyHSD(org_aov1)
+df <- as.data.frame(datatibble1)
+
+
+
+```
+
+Repeated Measures Analysis of Variance using R:
+
+It is similar to paired sample t-Test. One-Way ANOVA involves two variables, one a nominal multi-category variable and the other an ordinal or scale level variable;
+A Repeated measures ANOVA involves three or more variables, all ordinal or scale level in measurement. 
+
+Thus, Instead of breaking one ordinal or scale level dependent variable into independent groups (as in one way ANOVA), a repeated measures ANOVA makes comparisons across multiple ordinal or scale level variables answered sequentially (hence the term repeated measures). 
+
+
+Example: 
+Imagine that you are doing some marketing research to find out how the emotional expressions of service sector staff affect consumer spending. Specifically you wonder whether different emotions expressed by service sector staff are associated with different levels of spending. 
+
+You hypothesize that the service sector staff with a visible smile will result in higher levels of consumption then service sector staff with a neutral expression, and that both the smile and neutral expression will result in higher levels of consumer spending than service sector staff with an angry facial expression. 
+
+Data Collection:
+To test this hypothesis, you take photographs of a young woman with three different facial expressions: smiling, neutral, and angry. Let us say that you showed these three photographs to 185 consumers and asked them to approximate how much they would spend in a retail outlet when being served by these three employees. 
+The resultant data set is given as c6repeatedm.
+All 185 respondents looked at the three photos and indicated how much money (in US dollars) they would spend in each store at which the young woman is assumed to work. 
+
+Thus, in our repeated measures ANOVA, we have three scale-level variables that report consumer spending across the three emotional expressions.
+To find out whether the mean scores are different across these three variables, we will need to run a one-way repeated measures ANOVA.
+
+
+```{r}
+datatibble2 <- read_sav("Raw/c6repeatedm.sav")
+datatibble2
+
+summary(datatibble2)
+describe(datatibble2)
+
+
+boxplot(datatibble2)
+
+```
+
+Preparing Data:
+
+
+```{r}
+df1 <- data.frame(Con_Spending = datatibble2$Fsmile, Emotion = rep("Smile", times = 185))
+df1
+
+df2 <- data.frame(Con_Spending = datatibble2$Fneutral, Emotion = rep("Neutral", times = 185))
+df2
+
+df3 <- data.frame(Con_Spending = datatibble2$Fangry, Emotion = rep("Angry", times = 185))
+df3
+
+df1 <- rbind(df1,df2)
+df1 <- rbind(df1,df3)
+df1
+library(tidyverse)
+library(rstatix)
+library(ggplot2)
+library(ggpubr)
+
+
+df1 %>%
+  group_by(Emotion) %>%
+  get_summary_stats(Con_Spending, type="mean_sd")
+```
+
+Other Way:
+
+```{r}
+df_new <- as.data.frame(datatibble2)
+df_new$id <- 1:185
+df_new
+
+
+df_new <- df_new %>%
+  gather(key = "Emotion", value = "Con_Spending", Fsmile, Fneutral, Fangry) %>%
+  convert_as_factor(id, Emotion)
+df_new
+
+```
+  
+  Visualize the data
+  
+```{r}
+g_out <- ggboxplot(df_new, x = "Emotion", y = "Con_Spending")
+g_out
+
+```
+
+Identify Outliers
+
+```{r}
+df_new %>%
+  group_by(Emotion) %>%
+  identify_outliers(Con_Spending)
+
+```
+
+Normality Assumption
+```{r}
+df_new %>%
+  group_by(Emotion) %>%
+  shapiro_test(Con_Spending)
+```
+
+Repeated Measures ANOVA:
+
+```{r}
+res.aov <- anova_test(data = df_new, dv = Con_Spending, wid = id, within = Emotion)
+get_anova_table(res.aov)
+```
+
+Post-hoc Test:
+
+
+```{r}
+post_tst <- df_new %>%
+  pairwise_t_test(
+    Con_Spending ~ Emotion, paired = TRUE,
+    p.adjust.method = "bonferroni"
+    )
+post_tst
+```
+
+Conclusion:
+
+We have learnt to carry out bivariate ANOVA tests in two different forms. The one-way ANOVA compares a set of mean scores across multiple categories of the independent variable. The repeated measures ANOVA compares a set of mean scores across multiple variables measured sequentially. Both tests tell us whether the mean scores we are comparing are significantly different from one another and, if so, where they are different.
